@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans:
+    ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ink: #12172a;
+  --color-panel: #1a2138;
+  --color-raised: #222b47;
+  --color-line: #2a3352;
+  --color-fg: #e9edf7;
+  --color-dim: #8d97b5;
+  --color-faint: #5c6686;
+
+  --color-live: #79a6ff;
+  --color-good: #5ed39b;
+  --color-bad: #f27c7c;
+  --color-wait: #f3c46a;
+}
+
+@layer base {
+  html {
+    background: var(--color-ink);
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-live);
+    outline-offset: 2px;
+  }
+}
+
+/* Moving stripes on a progress bar that is actively counting. */
+@keyframes bar-sweep {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+
+.bar-live {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(255 255 255 / 0.2) 0 7px,
+    transparent 7px 14px
+  );
+  background-size: 28px 28px;
+  animation: bar-sweep 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-live {
+    animation: none;
+  }
+}

@@ -1,10 +1,43 @@
 import { useCallback } from "react";
 import { Icon } from "./Icon";
-import { formatUptime } from "./utils";
+import { cx, formatClock, formatUptime } from "./utils";
 
-const REPO_URL = "https://github.com/RoAppeal/rbx-enforcement-ban-tool";
+export function BrandMark({ size = 32 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="9" fill="#222b47" />
+      <path
+        d="M9 9.5h14a1.5 1.5 0 0 1 1.5 1.5v2.2a2.8 2.8 0 0 0 0 5.6V21a1.5 1.5 0 0 1-1.5 1.5H9A1.5 1.5 0 0 1 7.5 21v-2.2a2.8 2.8 0 0 0 0-5.6V11A1.5 1.5 0 0 1 9 9.5z"
+        fill="none"
+        stroke="#79a6ff"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m12.6 16.2 2.3 2.3 4.6-4.8"
+        fill="none"
+        stroke="#e9edf7"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-export function Nav({ startedAt, now }: { startedAt?: number; now: number }) {
+export function Nav({
+  startedAt,
+  now,
+  running,
+  testMode,
+  nextCheckAt,
+}: {
+  startedAt?: number;
+  now: number;
+  running: boolean;
+  testMode: boolean;
+  nextCheckAt?: number;
+}) {
   const logout = useCallback(async () => {
     try {
       await fetch("/logout", { method: "POST", credentials: "same-origin" });
@@ -13,40 +46,44 @@ export function Nav({ startedAt, now }: { startedAt?: number; now: number }) {
     }
   }, []);
 
+  const statusText = !running
+    ? "Stopped"
+    : testMode
+      ? "Test mode"
+      : `Running ${formatUptime(startedAt, now)}`;
+  const nextCheck =
+    running && nextCheckAt && nextCheckAt > now
+      ? `next check ${formatClock(nextCheckAt, now)}`
+      : "";
+
   return (
-    <header className="sticky top-0 z-20 border-b border-[#241a3d] bg-[#100a22]/90 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-[1240px] flex-wrap items-center justify-between gap-4 px-5 py-3 sm:px-7">
-        <a
-          className="flex min-w-0 items-center gap-3 text-inherit no-underline"
-          href={REPO_URL}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          <span className="grid size-11 shrink-0 place-items-center">
-            <img
-              className="h-full w-full object-contain"
-              src="https://roappeal.com/roappeal_logo_small.png"
-              alt="RoAppeal"
+    <header className="border-b border-line bg-ink/95 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-3">
+        <BrandMark />
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-[17px] font-semibold text-fg">Appeal monitor</p>
+          <p className="flex items-center gap-1.5 truncate text-[13px] text-dim">
+            <span
+              className={cx(
+                "inline-block size-2 shrink-0 rounded-full",
+                running ? (testMode ? "bg-wait" : "bg-good") : "bg-bad",
+              )}
             />
-          </span>
-          <span className="min-w-0 leading-tight">
-            <strong className="block truncate text-[17px] text-white">Enforcement Ban Tool</strong>
-            <span className="block truncate text-xs text-[#7e7499]">by RoAppeal</span>
-          </span>
-        </a>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[#b5abc9]">
-            Uptime: <b className="font-mono text-[#f4f0fa]">{formatUptime(startedAt, now)}</b>
-          </span>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-[#f4f0fa] transition hover:border-red-400/30 hover:bg-red-500/10"
-            onClick={logout}
-          >
-            <Icon name="logout" size={16} />
-            Log out
-          </button>
+            <span className="truncate">
+              {statusText}
+              {nextCheck ? `, ${nextCheck}` : ""}
+            </span>
+          </p>
         </div>
+        <button
+          type="button"
+          className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-dim transition hover:bg-fg/8 hover:text-fg"
+          aria-label="Log out"
+          title="Log out"
+          onClick={logout}
+        >
+          <Icon name="logout" size={18} />
+        </button>
       </div>
     </header>
   );

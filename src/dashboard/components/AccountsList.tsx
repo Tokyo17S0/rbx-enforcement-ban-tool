@@ -3,6 +3,7 @@ import { AccountCard } from "./AccountCard";
 
 export function AccountsList({
   accounts,
+  averageSolveMs,
   collapsed,
   entryOpen,
   now,
@@ -12,6 +13,7 @@ export function AccountsList({
   setPage,
 }: {
   accounts: AccountDashboardState[];
+  averageSolveMs?: number;
   collapsed: Record<string, boolean>;
   entryOpen: Record<string, boolean>;
   now: number;
@@ -22,9 +24,9 @@ export function AccountsList({
 }) {
   if (accounts.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-white/10 bg-white/[0.025] p-8 text-center text-sm text-[#7e7499]">
-        No accounts loaded.
-      </div>
+      <p className="rounded-2xl bg-panel p-6 text-center text-[15px] text-dim">
+        No accounts set up. Add them to ACCOUNTS_JSON in Railway, then redeploy.
+      </p>
     );
   }
 
@@ -34,6 +36,7 @@ export function AccountsList({
         <AccountCard
           key={account.username}
           account={account}
+          averageSolveMs={averageSolveMs}
           collapsed={collapsed[account.username] ?? true}
           entryOpen={entryOpen}
           now={now}

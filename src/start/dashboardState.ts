@@ -3,6 +3,8 @@ import type {
   AccountDashboardState,
   AppealEntry,
   AppealStatus,
+  CaptchaProvider,
+  CaptchaStats,
   DashboardState,
 } from "../types";
 import { emailProviderLabel } from "../modules/emailProviders";
@@ -30,6 +32,7 @@ const state: DashboardState = {
   totalAppealsSent: 0,
   totalFailedSubmissions: 0,
   discordWebhookEnabled: false,
+  captchaStats: { attempts: 0, solved: 0, failed: 0, totalSolveMs: 0 },
   accounts: [],
 };
 
@@ -173,6 +176,65 @@ export function syncDashboardAppealHistory(username: string, appealHistory: Appe
   recount();
 }
 
+export function startDashboardCaptcha(
+  username: string,
+  provider: CaptchaProvider,
+  timeoutMs: number,
+): void {
+  const account = findAccount(username);
+  state.captchaStats.provider = provider;
+  state.captchaStats.attempts += 1;
+  if (!account) {
+    return;
+  }
+
+  account.captcha = { status: "solving", provider, startedAt: Date.now(), timeoutMs };
+  account.lastUpdatedAt = Date.now();
+}
+
+export function finishDashboardCaptcha(
+  username: string,
+  result: { success: boolean; durationMs?: number; error?: string },
+): void {
+  const account = findAccount(username);
+  const finishedAt = Date.now();
+  const durationMs =
+    result.durationMs ?? (account?.captcha ? finishedAt - account.captcha.startedAt : undefined);
+
+  if (result.success) {
+    state.captchaStats.solved += 1;
+    state.captchaStats.totalSolveMs += durationMs ?? 0;
+    state.captchaStats.lastSolveMs = durationMs;
+  } else {
+    state.captchaStats.failed += 1;
+  }
+  state.captchaStats.lastFinishedAt = finishedAt;
+
+  if (!account?.captcha) {
+    return;
+  }
+
+  account.captcha = {
+    ...account.captcha,
+    status: result.success ? "solved" : "failed",
+    finishedAt,
+    ...(durationMs !== undefined ? { durationMs } : {}),
+    ...(result.error ? { error: result.error.slice(0, 200) } : {}),
+  };
+  account.lastUpdatedAt = finishedAt;
+}
+
+/** Marks a solve as failed if the submitter exited without reporting a result. */
+export function settleDashboardCaptcha(username: string): void {
+  if (findAccount(username)?.captcha?.status === "solving") {
+    finishDashboardCaptcha(username, { success: false, error: "Solver stopped early" });
+  }
+}
+
+export function setDashboardCaptchaStats(stats: CaptchaStats): void {
+  state.captchaStats = { ...stats };
+}
+
 export function setDashboardWebhook(value: string): string | undefined {
   webhookUrl = value;
   state.discordWebhookEnabled = Boolean(webhookUrl);
@@ -189,6 +251,7 @@ export function getDashboardState(): DashboardState {
   recount();
   return {
     ...state,
+    captchaStats: { ...state.captchaStats },
     accounts: state.accounts.map((account) => ({
       ...account,
       appealHistory: [...account.appealHistory],

@@ -110,6 +110,20 @@ function parseProxyFor2Captcha(proxy: string): TwoCaptchaProxy | undefined {
   }
 }
 
+/**
+ * How long each provider's polling loop waits before giving up (120 polls at the
+ * provider's interval). Used by the dashboard to draw solve progress.
+ */
+const PROVIDER_TIMEOUT_MS = {
+  "2captcha": 120 * 5000,
+  cds: 120 * 600,
+  funbypass: 120 * 1000,
+} as const;
+
+export function captchaTimeoutMs(provider: CaptchaConfig["provider"]): number {
+  return PROVIDER_TIMEOUT_MS[normalizeProvider(provider)];
+}
+
 export async function solveCaptcha(
   config: CaptchaConfig,
   blob: string,

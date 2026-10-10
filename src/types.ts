@@ -70,6 +70,27 @@ export interface AppealEntry {
   responseSubject?: string;
 }
 
+export interface CaptchaActivity {
+  status: "solving" | "solved" | "failed";
+  provider: CaptchaProvider;
+  startedAt: number;
+  /** How long the solver will wait before giving up on this puzzle. */
+  timeoutMs: number;
+  finishedAt?: number;
+  durationMs?: number;
+  error?: string;
+}
+
+export interface CaptchaStats {
+  provider?: CaptchaProvider;
+  attempts: number;
+  solved: number;
+  failed: number;
+  totalSolveMs: number;
+  lastSolveMs?: number;
+  lastFinishedAt?: number;
+}
+
 export interface AccountDashboardState {
   username: string;
   email: string;
@@ -86,6 +107,7 @@ export interface AccountDashboardState {
   approvalCount: number;
   escalationCount: number;
   rejectionWaitUntil?: number;
+  captcha?: CaptchaActivity;
   appealHistory: AppealEntry[];
 }
 
@@ -107,5 +129,6 @@ export interface DashboardState {
   discordWebhookEnabled: boolean;
   discordWebhookUrl?: string;
   discordWebhookMasked?: string;
+  captchaStats: CaptchaStats;
   accounts: AccountDashboardState[];
 }

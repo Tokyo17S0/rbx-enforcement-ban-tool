@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { BrandMark } from "../dashboard/components/Nav";
 import { handleDashboardLogin } from "../start/auth";
-
-const REPO_URL = "https://github.com/RoAppeal/rbx-enforcement-ban-tool";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,34 +17,22 @@ function LoginPage() {
     new URL(window.location.href).searchParams.get("error") === "1";
 
   return (
-    <main className="grid min-h-screen place-items-center bg-[radial-gradient(900px_520px_at_82%_-8%,rgba(217,24,24,0.18),transparent_60%),radial-gradient(820px_520px_at_-6%_4%,rgba(111,69,173,0.16),transparent_55%),#0c091d] p-6 text-[#f4f0fa]">
-      <form className="grid w-[min(360px,calc(100vw-32px))] gap-3" method="post" action="/login">
-        <div>
-          <a
-            className="mb-3 inline-flex min-w-0 items-center gap-2 text-inherit no-underline"
-            href={REPO_URL}
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            <span className="grid size-8 shrink-0 place-items-center">
-              <img
-                className="h-full w-full object-contain"
-                src="https://roappeal.com/roappeal_logo_small.png"
-                alt="RoAppeal"
-              />
-            </span>
-            <strong className="text-[17px] text-white">RoAppeal</strong>
-          </a>
-          <h1 className="text-2xl font-bold text-white">Enforcement Ban Tool</h1>
-          <p className="mt-1 text-sm text-[#7e7499]">Enter your dashboard password</p>
+    <main className="grid min-h-screen place-items-center bg-ink px-4 text-fg">
+      <form className="w-full max-w-sm space-y-4" method="post" action="/login">
+        <div className="flex items-center gap-3">
+          <BrandMark size={40} />
+          <div>
+            <h1 className="text-xl font-semibold text-fg">Appeal monitor</h1>
+            <p className="text-sm text-dim">Enter your dashboard password</p>
+          </div>
         </div>
         {hasError ? (
-          <div className="rounded-md border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-200">
-            Invalid password
-          </div>
+          <p className="rounded-xl bg-bad/12 p-3 text-[15px] text-bad" role="alert">
+            That password didn't match. Check DASHBOARD_PASSWORD in Railway.
+          </p>
         ) : null}
         <input
-          className="rounded-md border border-[#332347] bg-[#100a22] px-3 py-3 text-sm text-[#f4f0fa] outline-none transition placeholder:text-[#5d556b] focus:border-red-500 focus:ring-2 focus:ring-red-500/25"
+          className="w-full rounded-xl bg-panel px-4 py-3.5 text-[16px] text-fg outline-none ring-1 ring-line transition placeholder:text-faint focus:ring-2 focus:ring-live"
           name="password"
           type="password"
           autoComplete="current-password"
@@ -55,10 +42,10 @@ function LoginPage() {
           autoFocus
         />
         <button
-          className="rounded-md bg-red-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-500"
+          className="w-full rounded-full bg-live px-4 py-3.5 text-[16px] font-semibold text-ink transition hover:brightness-110"
           type="submit"
         >
-          Continue
+          Log in
         </button>
       </form>
     </main>

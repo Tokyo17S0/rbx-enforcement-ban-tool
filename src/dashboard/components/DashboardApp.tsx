@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardState } from "../../types";
 import { AccountsList } from "./AccountsList";
+import { CaptchaPanel, averageSolveMs } from "./CaptchaPanel";
 import { appealPageCount } from "./AppealsList";
 import { Nav } from "./Nav";
-import { StatCard } from "./StatCard";
+import { OutcomeBar } from "./OutcomeBar";
 import { WebhookPanel } from "./WebhookPanel";
 
 const POLL_MS = 5000;
@@ -27,7 +28,6 @@ export function DashboardApp() {
   const [collapsed, setCollapsedState] = useState<Record<string, boolean>>({});
   const [entryOpen, setEntryOpenState] = useState<Record<string, boolean>>({});
   const [pageOf, setPageOf] = useState<Record<string, number>>({});
-  const counts = state?.counts;
   const testMode = state?.testMode === true;
   const accounts = useMemo(() => state?.accounts ?? [], [state?.accounts]);
   const configurationError = state?.configurationError;
@@ -62,16 +62,16 @@ export function DashboardApp() {
       let changed = false;
       const next = { ...current };
 
-      accounts.forEach((account, index) => {
+      accounts.forEach((account) => {
         if (next[account.username] === undefined) {
-          next[account.username] = testMode ? index !== 0 : true;
+          next[account.username] = true;
           changed = true;
         }
       });
 
       return changed ? next : current;
     });
-  }, [accounts, testMode]);
+  }, [accounts]);
 
   useEffect(() => {
     setPageOf((current) => {
@@ -103,58 +103,47 @@ export function DashboardApp() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(900px_520px_at_82%_-8%,rgba(217,24,24,0.18),transparent_60%),radial-gradient(820px_520px_at_-6%_4%,rgba(111,69,173,0.16),transparent_55%),#0c091d] text-[#f4f0fa]">
-      <Nav startedAt={state?.startedAt} now={now} />
-      <main className="mx-auto w-full max-w-[1240px] px-5 py-6 sm:px-7">
-        <div className="space-y-6">
-          {banner ? (
-            <p className="rounded-md border border-red-400/25 bg-red-500/10 p-3 text-sm text-red-200">
-              {banner}
+    <div className="min-h-screen bg-ink text-fg">
+      <Nav
+        startedAt={state?.startedAt}
+        now={now}
+        running={state?.running ?? true}
+        testMode={testMode}
+        nextCheckAt={state?.nextCheckAt}
+      />
+      <main className="mx-auto w-full max-w-3xl space-y-6 px-4 pb-12 pt-5">
+        {banner ? (
+          <p className="rounded-2xl bg-bad/12 p-4 text-[15px] text-bad" role="alert">
+            {banner}. Retrying every few seconds.
+          </p>
+        ) : null}
+        {configurationError ? (
+          <div className="rounded-2xl bg-bad/12 p-4" role="alert">
+            <p className="font-semibold text-bad">The tool can't start</p>
+            <p className="mt-1 break-words text-[15px] text-fg/85">{configurationError}</p>
+            <p className="mt-2 text-sm text-dim">
+              Fix the matching variable in Railway, then redeploy.
             </p>
-          ) : null}
-          {configurationError ? (
-            <div className="rounded-lg border border-red-400/25 bg-red-500/10 p-4 text-sm text-red-100">
-              <p className="font-bold">Configuration error</p>
-              <p className="mt-1 break-words text-red-200">{configurationError}</p>
-            </div>
-          ) : null}
-          {!configurationError ? (
-            <>
-              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" id="overview">
-                <StatCard
-                  icon="send"
-                  label="Sent"
-                  tone="info"
-                  value={state?.totalAppealsSent ?? 0}
-                />
-                <StatCard icon="x" label="Rejected" tone="bad" value={counts?.rejected ?? 0} />
-                <StatCard
-                  icon="alert"
-                  label="Escalated"
-                  tone="warn"
-                  value={counts?.escalated ?? 0}
-                />
-                <StatCard icon="check" label="Approved" tone="good" value={counts?.approved ?? 0} />
-              </section>
-              <WebhookPanel state={state} onRefresh={load} />
-              <section id="accounts-section" className="space-y-3">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#7e7499]">
-                  Accounts
-                </p>
-                <AccountsList
-                  accounts={accounts}
-                  collapsed={collapsed}
-                  entryOpen={entryOpen}
-                  now={now}
-                  pageOf={pageOf}
-                  setCollapsed={setCollapsed}
-                  setEntryOpen={setEntryOpen}
-                  setPage={setPage}
-                />
-              </section>
-            </>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <>
+            <OutcomeBar accounts={accounts} />
+            <AccountsList
+              accounts={accounts}
+              averageSolveMs={averageSolveMs(state?.captchaStats)}
+              collapsed={collapsed}
+              entryOpen={entryOpen}
+              now={now}
+              pageOf={pageOf}
+              setCollapsed={setCollapsed}
+              setEntryOpen={setEntryOpen}
+              setPage={setPage}
+            />
+            <CaptchaPanel stats={state?.captchaStats} now={now} />
+            <WebhookPanel state={state} onRefresh={load} />
+          </>
+        )}
+        <p className="text-center text-xs text-faint">All times are UK time.</p>
       </main>
     </div>
   );

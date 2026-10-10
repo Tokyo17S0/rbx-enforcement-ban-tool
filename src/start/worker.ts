@@ -1,17 +1,23 @@
 import { isTestMode, loadConfig, loadProxies, loadTestConfig } from "../config";
 import type {
   AccountConfig,
+  AccountDashboardState,
   AppealEntry,
   AppealStatus,
   CaptchaConfig,
   DashboardConfig,
 } from "../types";
+import { captchaTimeoutMs } from "../modules/captcha";
 import { DISCORD_FOOTER_ICON_URL, sendDiscordWebhook } from "../modules/discordWebhook";
 import { Logger } from "../modules/logger";
 import {
   beginDashboardCycle,
   buildSampleHistory,
+  finishDashboardCaptcha,
   getDashboardWebhookUrl,
+  setDashboardCaptchaStats,
+  settleDashboardCaptcha,
+  startDashboardCaptcha,
   incrementDashboardSubmission,
   initializeDashboardState,
   setDashboardConfigurationError,
@@ -297,6 +303,46 @@ function calculateNextCheckTime(
   return Math.max(60, Math.ceil(nextCheckMs / 1000));
 }
 
+const SAMPLE_CAPTCHA_TIMEOUT_MS = 120 * 5000;
+
+/** Sample CAPTCHA activity for test mode: a solve that loops every 90 seconds. */
+function sampleCaptcha(status: AppealStatus, now: number): AccountDashboardState["captcha"] {
+  if (status === "submitted") {
+    const elapsed = now % 90_000;
+    return {
+      status: "solving",
+      provider: "2captcha",
+      startedAt: now - elapsed,
+      timeoutMs: SAMPLE_CAPTCHA_TIMEOUT_MS,
+    };
+  }
+
+  if (status === "escalated") {
+    return {
+      status: "failed",
+      provider: "2captcha",
+      startedAt: now - 9 * 60 * 1000,
+      finishedAt: now - 6 * 60 * 1000,
+      durationMs: 161_000,
+      timeoutMs: SAMPLE_CAPTCHA_TIMEOUT_MS,
+      error: "2Captcha solve failed: Workers could not solve the Captcha",
+    };
+  }
+
+  if (status === "rejected") {
+    return {
+      status: "solved",
+      provider: "2captcha",
+      startedAt: now - 23 * 60 * 1000,
+      finishedAt: now - 22 * 60 * 1000,
+      durationMs: 37_400,
+      timeoutMs: SAMPLE_CAPTCHA_TIMEOUT_MS,
+    };
+  }
+
+  return undefined;
+}
+
 async function runTestWorker(): Promise<void> {
   const config = loadTestConfig();
   const scenarios: Array<{
@@ -360,7 +406,17 @@ async function runTestWorker(): Promise<void> {
         lastError: scenario.lastError,
         failedSubmissions: scenario.failedSubmissions ?? 0,
         rejectionWaitUntil: scenario.rejectionWaitMs ? now + scenario.rejectionWaitMs : undefined,
+        captcha: sampleCaptcha(scenario.status, now),
       });
+    });
+    setDashboardCaptchaStats({
+      provider: "2captcha",
+      attempts: 14,
+      solved: 12,
+      failed: 2,
+      totalSolveMs: 12 * 41_000,
+      lastSolveMs: 37_400,
+      lastFinishedAt: now - 22 * 60 * 1000,
     });
 
     await sleep(10_000);
@@ -589,7 +645,19 @@ async function processAccount(
 
   await sleep(5000);
   updateDashboardAccount(username, { lastAction: "Submitting appeal", lastError: undefined });
-  const submitResult = await modules.submitAppeal(account, appeal, captcha, proxies);
+  const submitResult = await modules.submitAppeal(account, appeal, captcha, proxies, {
+    onCaptchaStart: () => {
+      updateDashboardAccount(username, { lastAction: "Solving CAPTCHA" });
+      startDashboardCaptcha(username, captcha.provider, captchaTimeoutMs(captcha.provider));
+    },
+    onCaptchaEnd: (result) => {
+      finishDashboardCaptcha(username, result);
+      updateDashboardAccount(username, {
+        lastAction: result.success ? "CAPTCHA solved, submitting" : "CAPTCHA failed",
+      });
+    },
+  });
+  settleDashboardCaptcha(username);
   if (!submitResult.success) {
     lastFailedSubmission[username] = Date.now();
     incrementDashboardSubmission(username, "failedSubmissions");

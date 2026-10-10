@@ -9,9 +9,9 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "theme-color", content: "#0c091d" },
+      { name: "theme-color", content: "#12172a" },
       { name: "color-scheme", content: "dark" },
-      { title: "Enforcement Ban Tool" },
+      { title: "Appeal monitor" },
     ],
   }),
   component: RootComponent,
@@ -31,7 +31,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="bg-[#0c091d] text-[#f4f0fa] antialiased">
+      <body className="bg-ink text-fg antialiased">
         {children}
         <Scripts />
       </body>

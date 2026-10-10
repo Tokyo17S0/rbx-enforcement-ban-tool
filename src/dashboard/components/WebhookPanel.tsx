@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DashboardState } from "../../types";
 import { Icon } from "./Icon";
-import { statusIconName } from "./status";
+import { ENTRY_LABEL, statusIconName } from "./status";
 import { cx } from "./utils";
 
 const WEBHOOK_TEST_EVENTS = ["submitted", "approved", "rejected", "escalated"] as const;
@@ -33,7 +33,7 @@ export function WebhookPanel({
   const updateWebhook = useCallback(
     async (webhookUrl: string) => {
       setSaving(true);
-      setMessage({ text: webhookUrl ? "Saving..." : "Clearing...", error: false });
+      setMessage({ text: webhookUrl ? "Saving" : "Turning off", error: false });
       try {
         const response = await fetch("/api/webhook", {
           method: "POST",
@@ -73,7 +73,7 @@ export function WebhookPanel({
   const sendTest = useCallback(async (event: WebhookTestEvent) => {
     setTesting(true);
     setTestMenuOpen(false);
-    setMessage({ text: "Sending test webhook...", error: false });
+    setMessage({ text: "Sending a test", error: false });
     try {
       const response = await fetch("/api/webhook/test", {
         method: "POST",
@@ -96,36 +96,34 @@ export function WebhookPanel({
     }
   }, []);
 
+  const field =
+    "w-full rounded-xl bg-ink px-3 py-3 pr-12 text-[15px] text-fg outline-none ring-1 ring-line transition placeholder:text-faint read-only:text-dim focus:ring-2 focus:ring-live disabled:cursor-not-allowed";
+  const quiet =
+    "inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-fg/8 px-4 py-2.5 text-sm font-semibold text-fg transition hover:bg-fg/12 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none";
+
   return (
-    <section className="rounded-lg border border-[#241a3d] bg-[#140e26] p-5" id="webhook">
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#7e7499]">
-          Discord webhook
-        </p>
-        {loaded ? (
-          <span
-            className={cx(
-              "inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs",
-              configured
-                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
-                : "border-white/10 bg-white/[0.04] text-[#b5abc9]",
-            )}
-          >
-            <span className="size-1.5 rounded-full bg-current" />
-            <span className="truncate">{configured ? "Active" : "Not configured"}</span>
+    <details className="group rounded-2xl bg-panel" id="webhook">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 [&::-webkit-details-marker]:hidden">
+        <span>
+          <span className="block font-semibold text-fg">Discord alerts</span>
+          <span className="block text-sm text-dim">
+            {!loaded ? "Loading" : configured ? "On, posts each appeal update to Discord" : "Off"}
           </span>
-        ) : null}
-      </div>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative min-w-0 flex-1">
+        </span>
+        <span className="text-dim transition-transform group-open:rotate-180">
+          <Icon name="chevron" size={18} />
+        </span>
+      </summary>
+      <div className="space-y-3 border-t border-line px-4 py-4">
+        <div className="relative">
           <input
-            className="w-full rounded-md border border-[#332347] bg-[#100a22] px-3 py-2.5 pr-12 text-sm text-[#f4f0fa] outline-none transition placeholder:text-[#5d556b] read-only:cursor-default read-only:text-[#d8d0e6] focus:border-red-500 focus:ring-2 focus:ring-red-500/25 disabled:cursor-not-allowed disabled:text-[#b5abc9]"
+            className={field}
             type="url"
             value={displayedValue}
             disabled={saving}
             readOnly={configured}
-            placeholder="https://discord.com/api/webhooks/..."
-            aria-label="Discord webhook URL"
+            placeholder="Paste a Discord webhook link"
+            aria-label="Discord webhook link"
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={(event) => {
               if (!configured && event.key === "Enter") {
@@ -137,8 +135,8 @@ export function WebhookPanel({
           {configured ? (
             <button
               type="button"
-              className="absolute right-2 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded text-[#b5abc9] transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500/25"
-              aria-label={showWebhookUrl ? "Hide Discord webhook URL" : "Show Discord webhook URL"}
+              className="absolute right-2 top-1/2 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-dim transition hover:bg-fg/8 hover:text-fg"
+              aria-label={showWebhookUrl ? "Hide webhook link" : "Show webhook link"}
               aria-pressed={showWebhookUrl}
               onClick={() => setShowWebhookUrl((shown) => !shown)}
             >
@@ -146,74 +144,65 @@ export function WebhookPanel({
             </button>
           ) : null}
         </div>
-        <div className="flex gap-2 sm:shrink-0">
+        <div className="flex flex-wrap gap-2">
           {!configured ? (
             <button
               type="button"
-              className="inline-flex flex-1 items-center justify-center rounded-md bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-55 sm:flex-none"
+              className="inline-flex flex-1 items-center justify-center rounded-full bg-live px-5 py-2.5 text-sm font-semibold text-ink transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
               disabled={saving || value.trim() === ""}
               onClick={() => void save()}
             >
-              Save
+              Turn on alerts
             </button>
-          ) : null}
-          {configured ? (
-            <button
-              type="button"
-              className="inline-flex flex-1 items-center justify-center rounded-md border border-white/10 px-4 py-2.5 text-sm font-bold text-[#d8d0e6] transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-55 sm:flex-none"
-              disabled={saving}
-              onClick={() => void clear()}
-            >
-              Clear
-            </button>
-          ) : null}
-          {configured ? (
-            <div className="relative">
+          ) : (
+            <>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-blue-400/25 bg-blue-400/10 px-4 py-2.5 text-sm font-bold text-blue-100 transition hover:border-blue-300/40 hover:bg-blue-400/15 disabled:cursor-not-allowed disabled:opacity-55"
-                aria-expanded={testMenuOpen}
-                aria-haspopup="menu"
-                disabled={testing || saving}
-                onClick={() => setTestMenuOpen((open) => !open)}
+                className={quiet}
+                disabled={saving}
+                onClick={() => void clear()}
               >
-                Test
-                <Icon name="chevron" size={15} />
+                Turn off
               </button>
-              {testMenuOpen ? (
-                <div
-                  className="absolute right-0 z-10 mt-2 w-44 overflow-hidden rounded-md border border-[#332347] bg-[#100a22] p-1 shadow-2xl shadow-black/30"
-                  role="menu"
+              <div className="relative flex-1 sm:flex-none">
+                <button
+                  type="button"
+                  className={cx(quiet, "w-full")}
+                  aria-expanded={testMenuOpen}
+                  aria-haspopup="menu"
+                  disabled={testing || saving}
+                  onClick={() => setTestMenuOpen((open) => !open)}
                 >
-                  {WEBHOOK_TEST_EVENTS.map((event) => (
-                    <button
-                      key={event}
-                      type="button"
-                      className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm font-semibold capitalize text-[#d8d0e6] transition hover:bg-white/[0.06] hover:text-white"
-                      role="menuitem"
-                      onClick={() => void sendTest(event)}
-                    >
-                      {event}
-                      <Icon name={statusIconName(event)} size={14} />
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
-      {message ? (
-        <p
-          className={cx(
-            "mt-3 inline-flex items-center gap-2 text-sm",
-            message.error ? "text-red-300" : "text-[#b5abc9]",
+                  Send a test
+                  <Icon name="chevron" size={15} />
+                </button>
+                {testMenuOpen ? (
+                  <div
+                    className="absolute right-0 z-10 mt-2 w-48 overflow-hidden rounded-xl bg-raised p-1 shadow-2xl shadow-black/40 ring-1 ring-line"
+                    role="menu"
+                  >
+                    {WEBHOOK_TEST_EVENTS.map((event) => (
+                      <button
+                        key={event}
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm text-fg transition hover:bg-fg/8"
+                        role="menuitem"
+                        onClick={() => void sendTest(event)}
+                      >
+                        {ENTRY_LABEL[event]}
+                        <Icon name={statusIconName(event)} size={14} />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </>
           )}
-        >
-          {!message.error ? <Icon name="check" size={14} /> : null}
-          {message.text}
-        </p>
-      ) : null}
-    </section>
+        </div>
+        {message ? (
+          <p className={cx("text-sm", message.error ? "text-bad" : "text-dim")}>{message.text}</p>
+        ) : null}
+      </div>
+    </details>
   );
 }

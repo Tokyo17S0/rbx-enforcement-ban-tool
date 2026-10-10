@@ -1,38 +1,61 @@
 import type { AppealEntry, AppealStatus } from "../../types";
 import type { IconName } from "./Icon";
 
+export type Tone = "live" | "wait" | "good" | "bad" | "idle";
+
 export const STATUS_LABEL: Record<AppealStatus, string> = {
   approved: "Approved",
   escalated: "Escalated",
   rejected: "Rejected",
-  stale: "Stale",
-  submitted: "Submitted",
-  unknown: "Pending",
+  stale: "No reply",
+  submitted: "In review",
+  unknown: "Starting",
 };
 
-export const STATUS_BADGE: Record<AppealStatus, string> = {
-  approved: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
-  escalated: "border-amber-400/25 bg-amber-400/10 text-amber-200",
-  rejected: "border-red-400/25 bg-red-500/10 text-red-300",
-  stale: "border-orange-400/25 bg-orange-400/10 text-orange-200",
-  submitted: "border-blue-400/25 bg-blue-400/10 text-blue-300",
-  unknown: "border-white/10 bg-white/[0.04] text-[#8b82a3]",
+export const STATUS_TONE: Record<AppealStatus, Tone> = {
+  approved: "good",
+  escalated: "wait",
+  rejected: "bad",
+  stale: "idle",
+  submitted: "live",
+  unknown: "idle",
 };
 
+export const TONE_PILL: Record<Tone, string> = {
+  live: "bg-live/12 text-live",
+  wait: "bg-wait/12 text-wait",
+  good: "bg-good/12 text-good",
+  bad: "bg-bad/12 text-bad",
+  idle: "bg-fg/8 text-dim",
+};
+
+export const TONE_TEXT: Record<Tone, string> = {
+  live: "text-live",
+  wait: "text-wait",
+  good: "text-good",
+  bad: "text-bad",
+  idle: "text-dim",
+};
+
+export const TONE_FILL: Record<Tone, string> = {
+  live: "bg-live",
+  wait: "bg-wait",
+  good: "bg-good",
+  bad: "bg-bad",
+  idle: "bg-dim",
+};
+
+/** Kept for the Discord test menu and appeal rows. */
 export const ENTRY_LABEL: Record<AppealEntry["status"], string> = {
   approved: "Approved",
   escalated: "Escalated",
   rejected: "Rejected",
-  stale: "Stale",
-  submitted: "Submitted",
+  stale: "No reply",
+  submitted: "In review",
 };
 
-export function entryStatusClass(status: AppealEntry["status"]): string {
-  if (status === "approved") return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
-  if (status === "submitted") return "border-blue-400/25 bg-blue-400/10 text-blue-300";
-  if (status === "rejected") return "border-red-400/25 bg-red-500/10 text-red-300";
-  if (status === "stale") return "border-orange-400/25 bg-orange-400/10 text-orange-200";
-  return "border-amber-400/25 bg-amber-400/10 text-amber-200";
+export function entryTone(status: AppealEntry["status"]): Tone {
+  return STATUS_TONE[status];
 }
 
 export function statusIconName(status: AppealEntry["status"]): IconName {

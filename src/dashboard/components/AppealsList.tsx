@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { AccountDashboardState, AppealEntry } from "../../types";
 import { Icon, type IconName } from "./Icon";
-import { ENTRY_LABEL, entryStatusClass, statusIconName } from "./status";
+import { ENTRY_LABEL, TONE_PILL, TONE_TEXT, entryTone, statusIconName } from "./status";
 import { cx, formatTime } from "./utils";
 
 const PAGE_SIZE = 10;
@@ -260,20 +260,9 @@ export function AppealsList({
 }) {
   const history = account.appealHistory ?? [];
   if (history.length === 0) {
-    return (
-      <p className="rounded-md border border-dashed border-white/10 p-4 text-sm text-[#7e7499]">
-        No appeals yet.
-      </p>
-    );
+    return <p className="px-4 py-4 text-sm text-dim">No appeals sent yet.</p>;
   }
 
-  const counts = history.reduce(
-    (acc, entry) => {
-      acc[entry.status] += 1;
-      return acc;
-    },
-    { approved: 0, escalated: 0, rejected: 0, stale: 0, submitted: 0 },
-  );
   const total = history.length;
   const ordered = [...history].reverse();
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -281,9 +270,8 @@ export function AppealsList({
   const pageItems = ordered.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#241a3d] bg-[#100a22]/55">
-      <AppealsSummary total={total} counts={counts} />
-      <div className="divide-y divide-[#241a3d]">
+    <div>
+      <ol className="divide-y divide-line">
         {pageItems.map((entry, index) => {
           const number = total - (currentPage * PAGE_SIZE + index);
           return (
@@ -297,7 +285,7 @@ export function AppealsList({
             />
           );
         })}
-      </div>
+      </ol>
       {pageCount > 1 ? (
         <AppealsPager
           account={account}
@@ -321,65 +309,29 @@ function AppealsPager({
   pageCount: number;
   setPage: (username: string, page: number) => void;
 }) {
+  const button =
+    "rounded-full bg-fg/8 px-4 py-2 text-sm font-medium text-fg transition hover:bg-fg/12 disabled:cursor-not-allowed disabled:opacity-40";
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#241a3d] bg-[#140e26] px-4 py-3 text-sm">
+    <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-sm">
       <button
         type="button"
-        className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 font-semibold text-[#f4f0fa] transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className={button}
         disabled={currentPage === 0}
         onClick={() => setPage(account.username, currentPage - 1)}
       >
-        Previous
+        Newer
       </button>
-      <span className="text-[#7e7499]">
+      <span className="text-dim">
         Page {currentPage + 1} of {pageCount}
       </span>
       <button
         type="button"
-        className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 font-semibold text-[#f4f0fa] transition hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+        className={button}
         disabled={currentPage >= pageCount - 1}
         onClick={() => setPage(account.username, currentPage + 1)}
       >
-        Next
+        Older
       </button>
-    </div>
-  );
-}
-
-function AppealsSummary({
-  counts,
-  total,
-}: {
-  counts: Record<AppealEntry["status"], number>;
-  total: number;
-}) {
-  const items = [
-    { label: "sent", n: total, className: "text-[#f4f0fa]" },
-    counts.approved
-      ? { label: "approved", n: counts.approved, className: "text-emerald-300" }
-      : undefined,
-    counts.submitted
-      ? { label: "in review", n: counts.submitted, className: "text-blue-300" }
-      : undefined,
-    counts.rejected
-      ? { label: "rejected", n: counts.rejected, className: "text-red-300" }
-      : undefined,
-    counts.stale ? { label: "stale", n: counts.stale, className: "text-orange-200" } : undefined,
-    counts.escalated
-      ? { label: "escalated", n: counts.escalated, className: "text-amber-200" }
-      : undefined,
-  ].filter((item): item is { label: string; n: number; className: string } => Boolean(item));
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#241a3d] bg-[#140e26] px-4 py-3">
-      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#7e7499]">Appeals</p>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#7e7499]">
-        {items.map((item) => (
-          <span key={item.label}>
-            <b className={item.className}>{item.n}</b> {item.label}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -400,52 +352,51 @@ function AppealRow({
   const when = entry.respondedAt ?? entry.submittedAt;
   const responseText = entry.response ?? entry.responseSubject;
   const responseHtml = entry.responseHtml;
-  const responseLabel = entry.status === "submitted" ? "Submitted response" : "Response";
   const hasResponse = Boolean(responseText || responseHtml);
   const hasDetail = Boolean(entry.message || hasResponse);
   const key = `${account.username}#${entryNumber}`;
+  const tone = entryTone(entry.status);
+  const detailId = `appeal-${account.username}-${entryNumber}`;
 
   return (
-    <div className="bg-[#100a22]/70 px-4 py-3 transition hover:bg-white/[0.025]">
-      <div className="grid gap-3 lg:grid-cols-[minmax(140px,1fr)_auto_auto] lg:items-center">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <strong className="text-sm text-white">Appeal #{entryNumber}</strong>
-            <span
-              className={cx(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
-                entryStatusClass(entry.status),
-              )}
-            >
-              <Icon name={statusIconName(entry.status)} size={13} />
-              {ENTRY_LABEL[entry.status]}
+    <li>
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition enabled:hover:bg-fg/4 disabled:cursor-default"
+        aria-expanded={hasDetail ? isOpen : undefined}
+        aria-controls={hasDetail ? detailId : undefined}
+        disabled={!hasDetail}
+        onClick={() => setEntryOpen(key, !isOpen)}
+      >
+        <span
+          className={cx("grid size-8 shrink-0 place-items-center rounded-full", TONE_PILL[tone])}
+        >
+          <Icon name={statusIconName(entry.status)} size={15} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-medium text-fg">
+            Appeal {entryNumber}{" "}
+            <span className={cx("font-normal", TONE_TEXT[tone])}>
+              {ENTRY_LABEL[entry.status].toLowerCase()}
             </span>
-          </div>
-        </div>
-        <span className="font-mono text-xs text-[#7e7499] lg:text-right">{formatTime(when)}</span>
-        <div className="flex justify-start lg:justify-end">
-          {hasDetail ? (
-            <button
-              type="button"
-              className="rounded-md border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-[#f4f0fa] transition hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-100"
-              onClick={() => setEntryOpen(key, !isOpen)}
-            >
-              {isOpen ? "Hide response" : "View response"}
-            </button>
-          ) : (
-            <span className="text-xs text-[#5d556b]">No response</span>
-          )}
-        </div>
-      </div>
+          </span>
+          <span className="block text-[13px] text-dim">{formatTime(when)}</span>
+        </span>
+        {hasDetail ? (
+          <span className={cx("shrink-0 text-dim transition-transform", isOpen && "rotate-180")}>
+            <Icon name="chevron" size={16} />
+          </span>
+        ) : null}
+      </button>
       {isOpen ? (
-        <div className="mt-3 grid gap-3 border-t border-[#241a3d] pt-3">
+        <div id={detailId} className="space-y-3 px-4 pb-4">
           {entry.message ? (
-            <AppealDetail icon="send" label="Appeal message" text={entry.message} />
+            <AppealDetail icon="send" label="What was sent" text={entry.message} />
           ) : null}
           {hasResponse ? (
             <AppealDetail
               icon="mail"
-              label={responseLabel}
+              label="Roblox's reply"
               text={responseText ?? ""}
               html={responseHtml}
               emailDate={formatTime(when)}
@@ -456,7 +407,7 @@ function AppealRow({
           ) : null}
         </div>
       ) : null}
-    </div>
+    </li>
   );
 }
 
@@ -480,11 +431,11 @@ function AppealDetail({
   text: string;
 }) {
   return (
-    <div className="rounded-md border border-[#241a3d] bg-[#140e26] p-3">
-      <div className="mb-2 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.08em] text-[#7e7499]">
-        <Icon name={icon} size={12} />
+    <div className="rounded-xl bg-ink/60 p-3">
+      <p className="mb-2 flex items-center gap-2 text-sm font-medium text-dim">
+        <Icon name={icon} size={14} />
         {label}
-      </div>
+      </p>
       {renderEmail ? (
         <EmailFrame
           date={emailDate}
@@ -495,7 +446,9 @@ function AppealDetail({
           title={label}
         />
       ) : (
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#d8d0e6]">{text}</p>
+        <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-fg/90">
+          {text}
+        </p>
       )}
     </div>
   );
@@ -540,7 +493,7 @@ function EmailFrame({
   return (
     <iframe
       ref={iframeRef}
-      className="w-full rounded-md border border-[#241a3d] bg-white"
+      className="w-full rounded-lg bg-white"
       onLoad={resizeFrame}
       sandbox="allow-same-origin"
       srcDoc={srcDoc}

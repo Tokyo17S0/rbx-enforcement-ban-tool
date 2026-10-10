@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import * as tls from "node:tls";
 import { Agent, ProxyAgent } from "undici";
 import { SocksClient } from "socks";
-import type { AccountConfig, CaptchaConfig } from "../types";
+import type { AccountConfig, CaptchaConfig, CaptchaSolveResult } from "../types";
 import { solveCaptcha } from "./captcha";
 import { Logger } from "./logger";
 
@@ -362,6 +362,12 @@ export interface SubmitAppealResult {
   error?: string;
 }
 
+/** Optional callbacks so the dashboard can show CAPTCHA progress. */
+export interface SubmitAppealHooks {
+  onCaptchaStart?: () => void;
+  onCaptchaEnd?: (result: CaptchaSolveResult) => void;
+}
+
 function parseChallengeHeaders(response: Response): ChallengeHeaders | null {
   const challengeId = response.headers.get("rblx-challenge-id");
   const challengeType = response.headers.get("rblx-challenge-type");
@@ -383,6 +389,7 @@ export async function submitAppeal(
   message: string,
   captcha: CaptchaConfig,
   proxies: string[],
+  hooks: SubmitAppealHooks = {},
 ): Promise<SubmitAppealResult> {
   const maxAttempts = 3;
   const candidateProxies = proxies.length > 0 ? shuffleProxies(proxies) : [undefined];
@@ -458,12 +465,14 @@ export async function submitAppeal(
       }
 
       Logger.solving(`${account.username}: Solving captcha`);
+      hooks.onCaptchaStart?.();
       const solvedCaptcha = await solveCaptcha(
         captcha,
         challengeMetadata.dataExchangeBlob,
         proxy,
         cookies,
       );
+      hooks.onCaptchaEnd?.(solvedCaptcha);
 
       if (!solvedCaptcha.success || !solvedCaptcha.token) {
         throw new Error(solvedCaptcha.error || "Captcha solver returned no token");
